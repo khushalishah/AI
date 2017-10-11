@@ -17,10 +17,10 @@ public class Homework {
 	double remTime = 0.0;
 	String inputFilePath = "E://Assignments//Sem 1//AI//input.txt";
 	String outputFilePath = "E://Assignments//Sem 1//AI//output.txt";
-	Queue<char[][]> queue = new LinkedList<>();
+	Queue<Node> queue = new LinkedList<>();
 	HashSet<Integer> set = new HashSet<>();
 	long startTime=0;
-	int depthLimit = 0;
+	int depthLimit = 3;
 
 	public static void main(String args[]) {
 		Homework hw = new Homework();
@@ -78,28 +78,40 @@ public class Homework {
 	}
 
 	void buildGameTree(){
-		queue.add(board);
+		queue.add(new Node(board,0,"",true,0));
 		while (!queue.isEmpty()) {
-			char[][] current = queue.remove();
-			set.clear();
+			Node node = queue.remove();
+			if(node.getDepth()!=depthLimit) {
+				char[][] current = node.getBoard();
+				set.clear();
 
-			for(int row=0;row<boardSize;row++) {
-				int rownum = row*boardSize;
-				for(int col=0;col<boardSize;col++) {
-					char fruit = current[row][col];
-					if(fruit != '*' && !set.contains(rownum+col)) {
-						HashSet<Integer> adjFruits = findAdjacentFruits(fruit,row,col,current);
-						//System.out.println(set);
-						//System.out.println(adjFruits);
-						//printMatrix(current);
-						selectFruit(current,adjFruits);
-						//printMatrix(current);
-						queue.add(current);
+				for(int row=0;row<boardSize;row++) {
+					int rownum = row*boardSize;
+					for(int col=0;col<boardSize;col++) {
+						char fruit = current[row][col];
+						if(fruit != '*' && !set.contains(rownum+col)) {
+							HashSet<Integer> adjFruits = findAdjacentFruits(fruit,row,col,current);
+							//System.out.println(set);
+							//System.out.println(adjFruits);
+							//printMatrix(current);
+							selectFruit(current,adjFruits);
+							//printMatrix(current);
+							queue.add(new Node(current, node.isOpponent?node.getCost()+adjFruits.size():node.getCost()-adjFruits.size(), getMove(row, col), node.isOpponent()?false:true,node.getDepth()+1));
 
+						}
 					}
 				}
+			}else {
+				queue.add(node);
+				break;
 			}
 		}
+		runMinMax();
+	}
+	
+	//run min max algorithm on leaf nodes
+	void runMinMax() {
+		
 	}
 
 	//gives adjacent fruits in row or column
@@ -186,13 +198,50 @@ public class Homework {
 		}
 	}
 
+	String getMove(int row,int col) {
+		return (char) (col+64) + "" + (row+1);
+	}
+
 	class Node{
-		int[][] board;
+		char[][] board;
 		int cost;
-		public int[][] getBoard() {
+		String move;
+		boolean isOpponent;
+		int depth;
+
+		public int getDepth() {
+			return depth;
+		}
+
+		public void setDepth(int depth) {
+			this.depth = depth;
+		}
+
+		public Node(char[][] board, int cost, String move, boolean isOpponent,int depth) {
+			super();
+			this.board = board;
+			this.cost = cost;
+			this.move = move;
+			this.isOpponent = isOpponent;
+			this.depth = depth;
+		}
+
+		public boolean isOpponent() {
+			return isOpponent;
+		}
+		public void setOpponent(boolean isOpponent) {
+			this.isOpponent = isOpponent;
+		}
+		public String getMove() {
+			return move;
+		}
+		public void setMove(String move) {
+			this.move = move;
+		}
+		public char[][] getBoard() {
 			return board;
 		}
-		public void setBoard(int[][] board) {
+		public void setBoard(char[][] board) {
 			this.board = board;
 		}
 		public int getCost() {
