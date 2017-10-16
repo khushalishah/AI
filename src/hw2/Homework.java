@@ -1,11 +1,14 @@
 package hw2;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Stack;
 
 import hw1.Homework4;
 
@@ -17,10 +20,10 @@ public class Homework {
 	double remTime = 0.0;
 	String inputFilePath = "E://Assignments//Sem 1//AI//input.txt";
 	String outputFilePath = "E://Assignments//Sem 1//AI//output.txt";
-	Queue<Node> queue = new LinkedList<>();
-	HashSet<Integer> set = new HashSet<>();
+	Stack<Node> stack = new Stack<>();
 	long startTime=0;
-	int depthLimit = 3;
+	int depthLimit = 1;
+	String bestMove = "";
 
 	public static void main(String args[]) {
 		Homework hw = new Homework();
@@ -78,44 +81,141 @@ public class Homework {
 	}
 
 	void buildGameTree(){
-		queue.add(new Node(board,0,"",true,0));
-		while (!queue.isEmpty()) {
-			Node node = queue.remove();
-			if(node.getDepth()!=depthLimit) {
-				char[][] current = node.getBoard();
-				set.clear();
-
-				for(int row=0;row<boardSize;row++) {
-					int rownum = row*boardSize;
-					for(int col=0;col<boardSize;col++) {
-						char fruit = current[row][col];
-						if(fruit != '*' && !set.contains(rownum+col)) {
-							HashSet<Integer> adjFruits = findAdjacentFruits(fruit,row,col,current);
-							//System.out.println(set);
-							//System.out.println(adjFruits);
-							//printMatrix(current);
-							selectFruit(current,adjFruits);
-							//printMatrix(current);
-							queue.add(new Node(current, node.isOpponent?node.getCost()+adjFruits.size():node.getCost()-adjFruits.size(), getMove(row, col), node.isOpponent()?false:true,node.getDepth()+1));
-
-						}
-					}
-				}
-			}else {
-				queue.add(node);
-				break;
-			}
-		}
-		runMinMax();
+		Node node = maxValue(new Node(board,0,"",false,0), 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
+		printMatrix(node.getBoard());
+		System.out.println("Move : "+node.getMove());
+		System.out.println("Cost : "+node.getCost());
+		writeToOutputFile(node.getMove());
 	}
 	
-	//run min max algorithm on leaf nodes
-	void runMinMax() {
+	void writeToOutputFile(String move) {
+		try {
+			BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath, false));
+				writer.write(move);
+				writer.newLine();
+				int col = (int) move.charAt(0)-65;
+				int row = Integer.parseInt(move.charAt(1)+"")-1;
+				HashSet<Integer> set = new HashSet<>();
+				findAdjacentFruits(board[row][col], row, col, board, set);
+				selectFruit(board, set);
+				
+
+				//print matrix to file
+				for(int i=0;i<boardSize;i++) {
+					for(int j=0;j<boardSize;j++) {
+						writer.write(board[i][j]);
+					}
+					writer.newLine();
+				}
+			writer.close();
+			long totalTime = System.nanoTime()-startTime;
+			System.out.println("Running Time : "+totalTime+" ns");
+			System.out.println("Running Time : "+(totalTime/1000000)+" ms");
+			System.out.println("Running Time : "+(totalTime/1000000000)+" s");
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
 		
+	}
+	
+	Node maxValue(Node node,int depth,float alpha,float beta) {
+		if(depth > depthLimit) {
+			node.setCost(evaluate(node));
+			return node;
+		}
+		
+		char[][] current = node.getBoard();
+		HashSet<Integer> set = new HashSet<>();
+		Node minNode=null;
+		
+		for(int row=0;row<boardSize;row++) {
+			int rownum = row*boardSize;
+			for(int col=0;col<boardSize;col++) {
+				char fruit = current[row][col];
+				if(fruit != '*' && !set.contains(rownum+col)) {
+					HashSet<Integer> adjFruits = findAdjacentFruits(fruit,row,col,current,set);
+					char [][] temp = new char[current.length][];
+					for(int i = 0; i < current.length; i++)
+					    temp[i] = current[i].clone();
+					selectFruit(temp,adjFruits);
+
+					if(node.depth==0) {
+						node.setMove(getMove(row, col));
+					}
+					System.out.println("MAX : "+temp);
+					minNode = minValue(new Node(temp, node.getCost()+adjFruits.size(), node.getMove(), true,node.getDepth()+1),depth+1,alpha,beta);
+					if (minNode.getCost() > alpha) {
+						alpha = minNode.getCost();
+					}
+					if (alpha >= beta) break;
+					
+				}
+			}
+		}
+		if(set.size()==0) {
+			//board has no fruit
+				return node;
+		}
+		minNode.setCost(alpha);
+		return minNode;
+	}
+	
+	Node minValue(Node node,int depth,float alpha,float beta) {
+		if(depth > depthLimit) {
+			node.setCost(evaluate(node));
+			return node;
+		}
+		
+		char[][] current = node.getBoard();
+		HashSet<Integer> set = new HashSet<>();
+		Node maxNode = null;
+		
+		for(int row=0;row<boardSize;row++) {
+			int rownum = row*boardSize;
+			for(int col=0;col<boardSize;col++) {
+				char fruit = current[row][col];
+				if(fruit != '*' && !set.contains(rownum+col)) {
+					HashSet<Integer> adjFruits = findAdjacentFruits(fruit,row,col,current,set);
+					
+					char [][] temp = new char[current.length][];
+					for(int i = 0; i < current.length; i++)
+					    temp[i] = current[i].clone();
+					selectFruit(temp,adjFruits);
+										
+					maxNode = maxValue(new Node(temp, node.getCost()-adjFruits.size(), node.getMove(),false,node.getDepth()+1),depth+1,alpha,beta);
+					if (maxNode.getCost() < beta) beta = maxNode.getCost();
+					if (alpha >= beta) break;
+					
+				}
+			}
+		}
+		if(set.size()==0) {
+			//board has no fruit
+				return node;
+		}
+		maxNode.setCost(beta);
+		return maxNode;
+	}
+
+	float evaluate(Node node) {
+		char[][] prob = node.getBoard();
+		int totalFruits = 0;
+		HashSet<Character> set = new HashSet<>();
+		for(int row=0;row<prob.length;row++) {
+			for(int col=0;col<prob.length;col++) {
+				if(prob[row][col]!='*') {
+					totalFruits++;
+					set.add(prob[row][col]);
+				}
+			}
+		}
+
+		System.out.println("Move : "+node.getMove()+"  Evaluation : "+node.getCost()+(totalFruits/set.size()));
+		return node.getCost()+(totalFruits/set.size());
 	}
 
 	//gives adjacent fruits in row or column
-	HashSet<Integer> findAdjacentFruits(char fruit,int row,int col,char[][] node) {
+	HashSet<Integer> findAdjacentFruits(char fruit,int row,int col,char[][] node,HashSet<Integer> set) {
 		int num = row*boardSize+col;
 		HashSet<Integer> adjFruits = new HashSet<>();
 		if(!set.contains(num)) {
@@ -124,25 +224,25 @@ public class Homework {
 			//check upper element
 			if(row!=0) {
 				if(node[row-1][col]==fruit) {
-					adjFruits.addAll(findAdjacentFruits(fruit, row-1, col, node));
+					adjFruits.addAll(findAdjacentFruits(fruit, row-1, col, node,set));
 				}
 			}
 			//check left element
 			if(col!=0) {
 				if(node[row][col-1]== fruit) {
-					adjFruits.addAll(findAdjacentFruits(fruit, row, col-1, node));
+					adjFruits.addAll(findAdjacentFruits(fruit, row, col-1, node,set));
 				}
 			}
 			//check right element
 			if(col!=boardSize-1) {
 				if(node[row][col+1] == fruit) {
-					adjFruits.addAll(findAdjacentFruits(fruit, row, col+1, node));
+					adjFruits.addAll(findAdjacentFruits(fruit, row, col+1, node,set));
 				}
 			}
 			//check lower element
 			if(row!=boardSize-1) {
 				if(node[row+1][col] == fruit) {
-					adjFruits.addAll(findAdjacentFruits(fruit, row+1, col, node));
+					adjFruits.addAll(findAdjacentFruits(fruit, row+1, col, node,set));
 				}
 			}
 		}
@@ -180,7 +280,7 @@ public class Homework {
 			}
 
 			if(endrow!=-1)
-				for(int i=startRow;i>=endrow;i--) {
+				for(int i=startRow;i>=endrow && i-noOfStars>=0;i--) {
 					char temp = node[i][col];
 					node[i][col] = node[i-noOfStars][col];
 					node[i-noOfStars][col] = temp;
@@ -199,12 +299,12 @@ public class Homework {
 	}
 
 	String getMove(int row,int col) {
-		return (char) (col+64) + "" + (row+1);
+		return (char) (col+65) + "" + (row+1);
 	}
 
 	class Node{
 		char[][] board;
-		int cost;
+		float cost;
 		String move;
 		boolean isOpponent;
 		int depth;
@@ -217,7 +317,7 @@ public class Homework {
 			this.depth = depth;
 		}
 
-		public Node(char[][] board, int cost, String move, boolean isOpponent,int depth) {
+		public Node(char[][] board, float cost, String move, boolean isOpponent,int depth) {
 			super();
 			this.board = board;
 			this.cost = cost;
@@ -244,16 +344,26 @@ public class Homework {
 		public void setBoard(char[][] board) {
 			this.board = board;
 		}
-		public int getCost() {
+		public float getCost() {
 			return cost;
 		}
-		public void setCost(int cost) {
+		public void setCost(float cost) {
 			this.cost = cost;
 		}
 
 		int calculateCost(int[][] board) {
 			int totalCost=0;
 			return totalCost;
+		}
+		
+		@Override
+		public String toString() {
+			// TODO Auto-generated method stub
+			System.out.println("Cost : "+this.getCost());
+			System.out.println("Move : "+this.getMove());
+			System.out.println("Depth : "+this.getDepth());
+			printMatrix(this.getBoard());
+			return super.toString();
 		}
 	}
 }

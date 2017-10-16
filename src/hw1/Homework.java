@@ -260,8 +260,7 @@ public class Homework {
 			
 			iterations++;
 			temp = startingTemp/(Math.log(iterations+3));
-			
-		}while(temp>0 && nextStateConflicts != 0 && System.currentTimeMillis()-startTime<=295000);
+		}while(temp>0 && nextStateConflicts != 0 && System.currentTimeMillis()-startTime<=285000);
 		if(nextStateConflicts==0) {
 			writeToOutputFile(true, currentSolution);
 		}else {

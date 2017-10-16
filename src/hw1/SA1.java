@@ -110,7 +110,6 @@ public class SA1 {
 	
 	void runSA() {
 		generateRandomPositions();
-		printMatrix(matrix);
 		int d = 5;
 		double temp = d;
 		int noOfIterations = 1;
