@@ -10,8 +10,6 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Stack;
 
-import hw1.Homework4;
-
 public class Homework {
 
 	char[][]board;
@@ -85,28 +83,29 @@ public class Homework {
 		printMatrix(node.getBoard());
 		System.out.println("Move : "+node.getMove());
 		System.out.println("Cost : "+node.getCost());
-		writeToOutputFile(node.getMove());
+		System.out.println("Best Move : "+bestMove);
+		writeToOutputFile(bestMove);
 	}
-	
+
 	void writeToOutputFile(String move) {
 		try {
 			BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath, false));
-				writer.write(move);
-				writer.newLine();
-				int col = (int) move.charAt(0)-65;
-				int row = Integer.parseInt(move.charAt(1)+"")-1;
-				HashSet<Integer> set = new HashSet<>();
-				findAdjacentFruits(board[row][col], row, col, board, set);
-				selectFruit(board, set);
-				
+			writer.write(move);
+			writer.newLine();
+			int col = (int) move.charAt(0)-65;
+			int row = Integer.parseInt(move.charAt(1)+"")-1;
+			HashSet<Integer> set = new HashSet<>();
+			findAdjacentFruits(board[row][col], row, col, board, set);
+			selectFruit(board, set);
 
-				//print matrix to file
-				for(int i=0;i<boardSize;i++) {
-					for(int j=0;j<boardSize;j++) {
-						writer.write(board[i][j]);
-					}
-					writer.newLine();
+
+			//print matrix to file
+			for(int i=0;i<boardSize;i++) {
+				for(int j=0;j<boardSize;j++) {
+					writer.write(board[i][j]);
 				}
+				writer.newLine();
+			}
 			writer.close();
 			long totalTime = System.nanoTime()-startTime;
 			System.out.println("Running Time : "+totalTime+" ns");
@@ -115,20 +114,20 @@ public class Homework {
 		}catch(Exception e) {
 			e.printStackTrace();
 		}
-		
+
 	}
-	
+
 	Node maxValue(Node node,int depth,float alpha,float beta) {
 		if(depth > depthLimit) {
 			node.setCost(evaluate(node));
 			return node;
 		}
-		
+
 		char[][] current = node.getBoard();
 		HashSet<Integer> set = new HashSet<>();
 		Node minNode=null;
-		
-		for(int row=0;row<boardSize;row++) {
+
+		main: for(int row=0;row<boardSize;row++) {
 			int rownum = row*boardSize;
 			for(int col=0;col<boardSize;col++) {
 				char fruit = current[row][col];
@@ -136,62 +135,66 @@ public class Homework {
 					HashSet<Integer> adjFruits = findAdjacentFruits(fruit,row,col,current,set);
 					char [][] temp = new char[current.length][];
 					for(int i = 0; i < current.length; i++)
-					    temp[i] = current[i].clone();
+						temp[i] = current[i].clone();
 					selectFruit(temp,adjFruits);
+					System.out.println("----------------------------------");
+					printMatrix(temp);
 
 					if(node.depth==0) {
 						node.setMove(getMove(row, col));
 					}
-					System.out.println("MAX : "+temp);
 					minNode = minValue(new Node(temp, node.getCost()+adjFruits.size(), node.getMove(), true,node.getDepth()+1),depth+1,alpha,beta);
 					if (minNode.getCost() > alpha) {
 						alpha = minNode.getCost();
+						bestMove = minNode.getMove();
 					}
-					if (alpha >= beta) break;
-					
+					if (alpha >= beta) break main;
+
 				}
 			}
 		}
 		if(set.size()==0) {
 			//board has no fruit
-				return node;
+			return node;
 		}
 		minNode.setCost(alpha);
 		return minNode;
 	}
-	
+
 	Node minValue(Node node,int depth,float alpha,float beta) {
 		if(depth > depthLimit) {
 			node.setCost(evaluate(node));
 			return node;
 		}
-		
+
 		char[][] current = node.getBoard();
 		HashSet<Integer> set = new HashSet<>();
 		Node maxNode = null;
-		
-		for(int row=0;row<boardSize;row++) {
+
+		main : for(int row=0;row<boardSize;row++) {
 			int rownum = row*boardSize;
 			for(int col=0;col<boardSize;col++) {
 				char fruit = current[row][col];
 				if(fruit != '*' && !set.contains(rownum+col)) {
 					HashSet<Integer> adjFruits = findAdjacentFruits(fruit,row,col,current,set);
-					
+
 					char [][] temp = new char[current.length][];
 					for(int i = 0; i < current.length; i++)
-					    temp[i] = current[i].clone();
+						temp[i] = current[i].clone();
 					selectFruit(temp,adjFruits);
-										
+					System.out.println("----------------------------------");
+					printMatrix(temp);
+
 					maxNode = maxValue(new Node(temp, node.getCost()-adjFruits.size(), node.getMove(),false,node.getDepth()+1),depth+1,alpha,beta);
 					if (maxNode.getCost() < beta) beta = maxNode.getCost();
-					if (alpha >= beta) break;
-					
+					if (alpha >= beta) break main;
+
 				}
 			}
 		}
 		if(set.size()==0) {
 			//board has no fruit
-				return node;
+			return node;
 		}
 		maxNode.setCost(beta);
 		return maxNode;
@@ -210,8 +213,8 @@ public class Homework {
 			}
 		}
 
-		System.out.println("Move : "+node.getMove()+"  Evaluation : "+node.getCost()+(totalFruits/set.size()));
-		return node.getCost()+(totalFruits/set.size());
+		System.out.println("Move : "+node.getMove()+"  Evaluation : "+(node.getCost()+((totalFruits/set.size())/2)));
+		return node.getCost()+((totalFruits/set.size())/2);
 	}
 
 	//gives adjacent fruits in row or column
@@ -263,28 +266,27 @@ public class Homework {
 
 	//this function will apply gravity to board
 	void applyGravity(char[][] node,HashSet<Integer> cols) {
+		Queue<Character> numbers = new LinkedList<>();
 		for(int col:cols) {
 			int noOfStars = 0;
-			int startRow = -1,endrow=-1;
-			for(int row=boardSize-1;row>=0;row--) {
+			int startRow = -1;
+			for(int row=node.length-1;row>=0;row--) {
 				if(node[row][col] == '*') {
 					if(startRow == -1) {
 						startRow = row;
 					}
 					noOfStars++;
-					startRow = row;
 				}else if(noOfStars!=0) {
-					endrow=row;
-					break;
+					numbers.add(node[row][col]);
 				}
 			}
 
-			if(endrow!=-1)
-				for(int i=startRow;i>=endrow && i-noOfStars>=0;i--) {
-					char temp = node[i][col];
-					node[i][col] = node[i-noOfStars][col];
-					node[i-noOfStars][col] = temp;
-				}
+			for(int i=startRow;i>=0;i--) {
+				if(!numbers.isEmpty())
+					node[i][col] = numbers.poll();
+				else
+					node[i][col] = '*';
+			}
 
 		}
 	}
@@ -355,7 +357,7 @@ public class Homework {
 			int totalCost=0;
 			return totalCost;
 		}
-		
+
 		@Override
 		public String toString() {
 			// TODO Auto-generated method stub
