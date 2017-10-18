@@ -9,29 +9,30 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
 
-public class Homework {
+public class MinMaxAgent {
 
 	char[][]board;
 	int boardSize = 0;
 	int typesOfFruit = 0;
 	double remTime = 0.0;
-	String inputFilePath = "E://Assignments//Sem 1//AI//input1.txt";
-	String outputFilePath = "E://Assignments//Sem 1//AI//output1.txt";
+	String inputFilePath = "E://Assignments//Sem 1//AI//input2.txt";
+	String outputFilePath = "E://Assignments//Sem 1//AI//output2.txt";
 	String calibrationFilePath = "E://Assignments//Sem 1//AI//calibration.txt";
 	long startTime=0;
-	int depthLimit = Integer.MAX_VALUE;
-
-	public Homework() {
+	int depthLimit = 1;
+	/*String bestMove = "";
+	double bestCost = 0.0;*/
+	
+	public MinMaxAgent() {
 		// TODO Auto-generated constructor stub
 		startTime = System.currentTimeMillis();
 		readInput();
-		readCalibrationFile();
 		buildGameTree();
 	}
 
 	public static void main(String args[]) {
-		Homework hw = new Homework();
-
+		new MinMaxAgent();
+		
 	}
 
 	void readCalibrationFile() {
@@ -47,12 +48,9 @@ public class Homework {
 					depthLimit++;
 					bnodes = bnodes/boardSize;
 				}while(bnodes/boardSize>0);
-				if(typesOfFruit>4 && depthLimit>1)
-					depthLimit--;
-				if(typesOfFruit>5 && boardSize>15)
-					depthLimit = 2;
+				depthLimit--;
 				System.out.println("Depth Limit : "+depthLimit);
-
+				
 
 			}catch(Exception e) {
 				e.printStackTrace();
@@ -116,6 +114,7 @@ public class Homework {
 	}
 
 	void buildGameTree(){
+		
 		Node node = maxValue(new Node(board,0,""), 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
 		System.out.println("Best Move : "+node.getMove());
 		System.out.println("Cost : "+node.getCost());
@@ -162,7 +161,7 @@ public class Homework {
 		Node minNode=null;
 		Node bestMove = null;
 
-		for(int row=0;row<boardSize;row++) {
+		main: for(int row=0;row<boardSize;row++) {
 			int rownum = row*boardSize;
 			for(int col=0;col<boardSize;col++) {
 				char fruit = current[row][col];
@@ -172,25 +171,34 @@ public class Homework {
 					for(int i = 0; i < current.length; i++)
 						temp[i] = current[i].clone();
 					selectFruit(temp,adjFruits);
+					/*System.out.println("-----------------");
+					printMatrix(temp);*/
 
 					if(depth==0) {
 						node.setMove(getMove(row, col));
 					}
 					minNode = minValue(new Node(temp, node.getCost()+adjFruits.size(), node.getMove()),depth+1,alpha,beta);
-
+					
 					if ((bestMove == null) || (bestMove.getCost() < minNode.getCost())) {
-						bestMove = minNode;
-						bestMove.move = getMove(row, col);
-					}
-					if (minNode.getCost() > alpha) {
+		                bestMove = minNode;
+		                bestMove.move = getMove(row, col);
+		            }
+		            if (minNode.getCost() > alpha) {
+		                alpha = minNode.getCost();
+		                bestMove = minNode;
+		            }
+		            if (beta <= alpha) {
+		                bestMove.cost = beta;
+		                bestMove.move = "";
+		                return bestMove; // pruning
+		            }
+					
+					/*if (minNode.getCost() > alpha) {
 						alpha = minNode.getCost();
-						bestMove = minNode;
+						bestMove = minNode.getMove();
+						bestCost = minNode.getCost();
 					}
-					if (beta <= alpha) {
-						bestMove.cost = beta;
-						bestMove.move = "";
-						return bestMove; // pruning
-					}
+					if (alpha >= beta) break main;*/
 
 				}
 			}
@@ -199,6 +207,8 @@ public class Homework {
 			//board has no fruit
 			return node;
 		}
+		/*minNode.setCost(alpha);
+		return minNode;*/
 		return bestMove;
 	}
 
@@ -224,22 +234,26 @@ public class Homework {
 					for(int i = 0; i < current.length; i++)
 						temp[i] = current[i].clone();
 					selectFruit(temp,adjFruits);
+					/*System.out.println("-----------------");
+					printMatrix(temp);*/
 
 					maxNode = maxValue(new Node(temp, node.getCost()-adjFruits.size(), node.getMove()),depth+1,alpha,beta);
-
+					/*if (maxNode.getCost() < beta) beta = maxNode.getCost();
+					if (alpha >= beta) break main;*/
+					
 					if ((bestMove == null) || (bestMove.getCost() > maxNode.getCost())) {
-						bestMove = maxNode;
-						bestMove.move = getMove(row, col);
-					}
-					if (maxNode.getCost() < beta) {
-						beta = maxNode.getCost();
-						bestMove = maxNode;
-					}
-					if (beta <= alpha) {
-						bestMove.cost = alpha;
-						bestMove.move = "";
-						return bestMove; // pruning
-					}
+		                bestMove = maxNode;
+		                bestMove.move = getMove(row, col);
+		            }
+		            if (maxNode.getCost() < beta) {
+		                beta = maxNode.getCost();
+		                bestMove = maxNode;
+		            }
+		            if (beta <= alpha) {
+		                bestMove.cost = alpha;
+		                bestMove.move = "";
+		                return bestMove; // pruning
+		            }
 
 				}
 			}
@@ -248,6 +262,8 @@ public class Homework {
 			//board has no fruit
 			return node;
 		}
+		/*maxNode.setCost(beta);
+		return maxNode;*/
 		return bestMove;
 	}
 
