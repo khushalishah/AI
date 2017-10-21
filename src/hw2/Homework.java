@@ -49,7 +49,7 @@ public class Homework {
 				}while(bnodes/boardSize>0);
 				if(typesOfFruit>4 && depthLimit>1)
 					depthLimit--;
-				if(typesOfFruit>5 && boardSize>15)
+				if(typesOfFruit>5 && boardSize>15 && depthLimit>2)
 					depthLimit = 2;
 				System.out.println("Depth Limit : "+depthLimit);
 
@@ -213,7 +213,7 @@ public class Homework {
 		Node maxNode = null;
 		Node bestMove = null;
 
-		main : for(int row=0;row<boardSize;row++) {
+		for(int row=0;row<boardSize;row++) {
 			int rownum = row*boardSize;
 			for(int col=0;col<boardSize;col++) {
 				char fruit = current[row][col];
