@@ -10,8 +10,8 @@ import java.util.HashMap;
 
 public class Homework {
 
-	String inputFilePath = "E://Assignments//Sem 1//AI//input.txt";
-	String outputFilePath = "E://Assignments//Sem 1//AI//output.txt";
+	String inputFilePath = "E://Assignments//Sem 1//AI//input11.txt";
+	String outputFilePath = "E://Assignments//Sem 1//AI//output11.txt";
 	int noOfQuery = 0;
 	int noOfKB = 0;
 	ArrayList<Literal> queries = new ArrayList<>();
@@ -69,17 +69,18 @@ public class Homework {
 					line = br.readLine();
 
 					String[] str = line.split("\\(");
-					String name = str[0];
+					String name = str[0].trim();
 					str = str[1].split(",");
 					String args[] = new String[str.length];
 					int j=0;
 					for(String s:str) {
-						args[j] = s;
+						args[j] = s.trim();
 						j++;
 					}
 					//remove last bracket
 					String last = args[args.length-1];
-					args[args.length-1] = last.substring(0, last.length()-1);
+					int index = last.indexOf(")");
+					args[args.length-1] = last.substring(0,index);
 					boolean isNot = false;
 					if(name.startsWith("~")) {
 						name = name.substring(1, name.length());
@@ -89,7 +90,7 @@ public class Homework {
 						isNot = true;
 					}
 
-					Predicate predicate = new Predicate(name,args);
+					Predicate predicate = new Predicate(name.trim(),args);
 					Literal literal = new Literal(predicate,isNot);
 					queries.add(literal);
 
@@ -132,27 +133,28 @@ public class Homework {
 		String[] clauses = line.split(separator);
 		for(String clause:clauses) {
 			String[] str = clause.split("\\(");
-			String name = str[0];
+			String name = str[0].trim();
 			str = str[1].split(",");
 			String args[] = new String[str.length];
 			int j=0;
 			for(String s:str) {
-				args[j] = s;
+				args[j] = s.trim();
 				j++;
 			}
 			//remove last bracket
 			String last = args[args.length-1];
-			args[args.length-1] = last.substring(0, last.length()-1);
+			int index = last.indexOf(")");
+			args[args.length-1] = last.substring(0,index);
 			boolean isNot = false;
 			if(name.startsWith("~")) {
 				name = name.substring(1, name.length());
 				isNot = true;
 			}else if(name.startsWith("NOT")) {
-				name = name.split("\\s+")[0];
+				name = name.split("\\s+")[1];
 				isNot = true;
 			}
 
-			Predicate predicate = new Predicate(name,args);
+			Predicate predicate = new Predicate(name.trim(),args);
 			Literal literal = new Literal(predicate,isNot);
 			literals.add(literal);
 		}
@@ -216,13 +218,21 @@ public class Homework {
 			for(Literal l2:c2.getClause()) {
 				//System.out.println(l1);
 				//System.out.println(l2);
-				if(l1.equals(l2) && l1.isNot != l2.isNot) {
+				//System.out.println(l1.getPredicate().getName());
+				//System.out.println(l2.getPredicate().getName());
+				if(l1.getPredicate().getName().equals(l2.getPredicate().getName()) && l1.isNot != l2.isNot) {
 					//unification
 					HashMap<String,String> temp = unify(l1, l2);
 					if(temp!=null) {
 						//can be simplified
+						//System.out.println(l1);
+						//System.out.println(l2);
+						//System.out.println(ct1.getClause());
 						ct1.getClause().remove(l1);
+						//System.out.println(ct1.getClause());
+						//System.out.println(ct2.getClause());
 						ct2.getClause().remove(l2);
+						//System.out.println(ct2.getClause());
 						substituitionSet.putAll(temp);
 					}
 
@@ -301,6 +311,14 @@ public class Homework {
 					substituitionSet.put(x, y);
 				}else {
 					//both are variables
+					if(substituitionSet.containsKey(x)) {
+						//if x is already unified with another constant or variable
+						substituitionSet.put(y, substituitionSet.get(x));
+					}
+					if(substituitionSet.containsKey(y)) {
+						//if y is already unified with another constant or variable
+						substituitionSet.put(x, substituitionSet.get(y));
+					}
 					substituitionSet.put(x, y);
 				}
 			}
@@ -390,7 +408,8 @@ public class Homework {
 		@Override
 		public boolean equals(Object obj) {
 			// TODO Auto-generated method stub
-			if(this.getPredicate().equals(((Literal) obj).getPredicate()))
+			Literal l = (Literal) obj;
+			if(this.getPredicate().equals(l.getPredicate()) && this.isNot==l.isNot)
 				return true;
 			return false;
 		}
