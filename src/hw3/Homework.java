@@ -7,11 +7,12 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class Homework {
 
-	String inputFilePath = "E://Assignments//Sem 1//AI//input11.txt";
-	String outputFilePath = "E://Assignments//Sem 1//AI//output11.txt";
+	String inputFilePath = "E://Assignments//Sem 1//AI//input.txt";
+	String outputFilePath = "E://Assignments//Sem 1//AI//output.txt";
 	int noOfQuery = 0;
 	int noOfKB = 0;
 	ArrayList<Literal> queries = new ArrayList<>();
@@ -48,7 +49,7 @@ public class Homework {
 			writer.close();
 			long totalTime = System.currentTimeMillis()-startTime;
 			System.out.println("Running Time : "+totalTime+" ms");
-			System.out.println("Running Time : "+(totalTime/1000)+" s");
+			//System.out.println("Running Time : "+(totalTime/1000)+" s");
 		}catch(Exception e) {
 			e.printStackTrace();
 		}
@@ -168,13 +169,61 @@ public class Homework {
 		for(int i=0;i<noOfQuery;i++) {
 			//solve one by one queries
 			ArrayList<Clause> KB = new ArrayList<>(knowledge);
+			standardizeVariables(KB);
 			Literal query = queries.get(i);
 			query.negate();
 			ArrayList<Literal> q = new ArrayList<>();
 			q.add(query);
-			ans[i] = check(new Clause(q), KB);
+			Clause qc = new Clause(q);
+			KB.add(qc);
+			ans[i] = check(qc, KB);
 		}
 
+	}
+
+	void standardizeVariables(ArrayList<Clause> kb) {
+		HashSet<String> variables = new HashSet<>();
+
+		for(Clause c:kb) {
+			//System.out.println(c);
+			HashSet<String> temp = new HashSet<>();
+			ArrayList<Literal> literals = c.getClause();
+			for(Literal l:literals) {
+				Predicate p = l.getPredicate();
+				String[] args = p.getArgs();
+				for(String arg:args) {
+					if(Character.isLowerCase(arg.charAt(0)))
+						if(variables.contains(arg) && !temp.contains(arg)) {
+							//variable is already used in other clause
+							for(int i=0;;i++){
+								if(!variables.contains(arg+i)) {
+									substitute(arg,arg+i,c);
+									variables.add(arg+i);
+									temp.add(arg+i);
+									break;
+								}
+							}
+						}else {
+							variables.add(arg);
+							temp.add(arg);
+						}
+				}
+			}
+			//System.out.println(c);
+		}
+
+	}
+
+	void substitute(String original,String sub,Clause clause) {
+		for(Literal l:clause.getClause()) {
+			String[] args = l.getPredicate().getArgs();
+			for(int i=0;i<args.length;i++) {
+				String arg = args[i];
+				if(arg.equals(original)) {
+					args[i] = sub;
+				}
+			}
+		}
 	}
 
 	boolean check(Clause c,ArrayList<Clause> kb) {
@@ -214,31 +263,40 @@ public class Homework {
 		//ArrayList<Literal> li1 = new ArrayList<>(c1.getClause());
 		//ArrayList<Literal> li2 = new ArrayList<>(c2.getClause());
 		HashMap<String,String> substituitionSet = new HashMap<>();
+		boolean equal = false;
 		for(Literal l1:c1.getClause()) {
 			for(Literal l2:c2.getClause()) {
 				//System.out.println(l1);
 				//System.out.println(l2);
-				//System.out.println(l1.getPredicate().getName());
-				//System.out.println(l2.getPredicate().getName());
-				if(l1.getPredicate().getName().equals(l2.getPredicate().getName()) && l1.isNot != l2.isNot) {
+
+				if(l1.getPredicate().getName().equals(l2.getPredicate().getName()) && l1.isNot != l2.isNot) {					
 					//unification
 					HashMap<String,String> temp = unify(l1, l2);
 					if(temp!=null) {
 						//can be simplified
-						//System.out.println(l1);
-						//System.out.println(l2);
-						//System.out.println(ct1.getClause());
 						ct1.getClause().remove(l1);
-						//System.out.println(ct1.getClause());
-						//System.out.println(ct2.getClause());
 						ct2.getClause().remove(l2);
-						//System.out.println(ct2.getClause());
 						substituitionSet.putAll(temp);
 					}
 
+				}else if(l1.getPredicate().getName().equals(l2.getPredicate().getName()) && l1.isNot == l2.isNot) {
+					//check if arguments are same
+					String[] args1 = l1.getPredicate().getArgs();
+					String[] args2 = l2.getPredicate().getArgs();
+					equal = true;
+					for(int i=0;i<args1.length;i++) {
+						if(!args1[i].equals(args2[i])) {
+							equal = false;
+							break;
+						}
+					}
+					if(equal) {
+						ct1.getClause().remove(l2);
+					}
 				}
 			}
 		}
+
 		if(substituitionSet.size()>0) {
 			for(String var:substituitionSet.keySet()) {
 				String constant = substituitionSet.get(var);
@@ -280,6 +338,8 @@ public class Homework {
 				return ct2;
 			if(ct2.getClause().size()==0)
 				return ct1;
+			if(equal)
+				return mergeClauses(ct1, ct2);
 		}
 		return null;
 	}
